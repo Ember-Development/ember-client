@@ -1,0 +1,537 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserType {
+  INTERNAL
+  CLIENT
+}
+
+enum InternalRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ClientRole {
+  CLIENT_ADMIN
+  CLIENT_VIEWER
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  PAUSED
+  COMPLETE
+  ARCHIVED
+}
+
+enum ProjectPhase {
+  DISCOVERY
+  DESIGN
+  BUILD
+  QA
+  LAUNCH
+  SUPPORT
+}
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
+
+enum UpdateType {
+  WEEKLY
+  DECISION
+  RISK
+  LAUNCH
+  GENERAL
+}
+
+enum DocumentType {
+  SCOPE
+  SOW
+  ARCHITECTURE
+  DESIGN
+  API
+  LAUNCH_CHECKLIST
+  HANDOFF
+  OTHER
+}
+
+enum ChangeRequestType {
+  BUG
+  ENHANCEMENT
+  NEW_FEATURE
+  CONTENT
+  OTHER
+}
+
+enum ChangeRequestScope {
+  IN_SCOPE
+  OUT_OF_SCOPE
+  UNKNOWN
+}
+
+enum ChangeRequestStatus {
+  NEW
+  NEEDS_CLARIFICATION
+  REVIEWING
+  APPROVED
+  DECLINED
+  SCHEDULED
+  IN_PROGRESS
+  SHIPPED
+  CANCELED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+enum ApprovalTargetType {
+  MILESTONE
+  DOCUMENT
+  CHANGE_REQUEST
+}
+
+enum DeliverableStatus {
+  BACKLOG
+  PLANNED
+  IN_PROGRESS
+  QA
+  BLOCKED
+  DONE
+}
+
+enum Priority {
+  LOW
+  MED
+  HIGH
+  URGENT
+}
+
+enum PricingModel {
+  HOURLY
+  FIXED_PRICE
+  RETAINER
+  MILESTONE_BASED
+  TBD
+}
+
+model Tenant {
+  id           String  @id @default(cuid())
+  name         String
+  slug         String  @unique
+  logoUrl      String?
+  primaryColor String?
+
+  users    User[]
+  clients  Client[]
+  projects Project[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  authUserId String  @unique
+  email      String  @unique
+  firstName  String?
+  lastName   String?
+  avatarUrl  String?
+
+  userType     UserType
+  internalRole InternalRole?
+  clientRole   ClientRole?
+
+  isActive Boolean @default(true)
+
+  projectMemberships   ProjectMember[]
+  projectInvitations   ProjectInvitation[]     @relation("ProjectInvitations")
+  invitedToProjects    ProjectInvitation[]     @relation("InvitedUser")
+  magicLinkTokens      MagicLinkToken[]
+  sessions             Session[]
+  assignedMilestones   Milestone[]
+  assignedDeliverables Deliverable[]
+  uploadedAttachments  DeliverableAttachment[]
+  comments             DeliverableComment[]
+  notifications        Notification[]
+  changeRequests       ChangeRequest[]
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  @@index([tenantId, userType])
+}
+
+model Client {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name    String
+  slug    String
+  website String?
+  notes   String?
+  status  String?
+
+  projects Project[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, name])
+}
+
+model Project {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  name String
+  slug String
+
+  status ProjectStatus @default(PLANNING)
+  phase  ProjectPhase  @default(DISCOVERY)
+
+  startDate        DateTime?
+  targetLaunchDate DateTime?
+  dueDate          DateTime
+  description      String?
+
+  pricingModel        PricingModel? @default(TBD)
+  weeklyCapacityHours Int?
+  hourlyRateCents     Int?
+  fixedPriceCents     Int?
+  retainerAmountCents Int?
+  retainerFrequency   String?
+  pricingNotes        String?       @db.Text
+
+  members        ProjectMember[]
+  invitations    ProjectInvitation[]
+  milestones     Milestone[]
+  updates        ProjectUpdate[]
+  documents      Document[]
+  changeRequests ChangeRequest[]
+  deliverables   Deliverable[]
+  sprints        Sprint[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, clientId, status])
+}
+
+model ProjectMember {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clientRole      ClientRole?
+  isClientVisible Boolean     @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Milestone {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  status      MilestoneStatus @default(NOT_STARTED)
+  dueDate     DateTime?
+
+  requiresClientApproval Boolean         @default(false)
+  approvalStatus         ApprovalStatus?
+  approvalNotes          String?
+
+  orderIndex    Int       @default(0)
+  completedAt   DateTime?
+  assignedToId  String?
+  assignedTo    User?     @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  clientVisible Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, status])
+  @@index([projectId, orderIndex])
+}
+
+model ProjectUpdate {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  authorId String?
+  type     UpdateType @default(WEEKLY)
+  title    String?
+  body     String
+
+  loomUrl       String?
+  externalLinks String[] @default([])
+
+  clientVisible Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, clientVisible, createdAt])
+}
+
+model Document {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  uploaderId   String?
+  type         DocumentType @default(OTHER)
+  title        String
+  description  String?
+  versionLabel String?
+
+  content    String? @db.Text
+  templateId String?
+
+  storageProvider String?
+  storageKey      String?
+  fileName        String?
+  fileMimeType    String?
+  fileSizeBytes   Int?
+  externalUrl     String?
+
+  clientVisible Boolean   @default(false)
+  publishedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, type, clientVisible])
+}
+
+model ChangeRequest {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  authorId String?
+  author   User?               @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  type     ChangeRequestType   @default(ENHANCEMENT)
+  scope    ChangeRequestScope  @default(UNKNOWN)
+  status   ChangeRequestStatus @default(NEW)
+  priority Priority            @default(MED)
+
+  title       String
+  description String
+
+  estimateHours              Float?
+  aiEstimatedHours           Float?
+  estimateCostCents          Int?
+  impactNotes                String?
+  estimatedTimelineDelayDays Int?
+  newProjectDueDate          DateTime?
+
+  scheduledForMilestoneId String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([projectId, status, priority])
+}
+
+model Sprint {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name      String
+  startDate DateTime
+  endDate   DateTime
+
+  deliverables Deliverable[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, startDate])
+}
+
+model Deliverable {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+
+  status   DeliverableStatus @default(PLANNED)
+  priority Priority          @default(MED)
+  dueDate  DateTime?
+
+  assigneeId    String?
+  assignee      User?   @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  estimateDays  Int?
+  clientVisible Boolean @default(true)
+  orderIndex    Int     @default(0)
+
+  milestoneId     String?
+  changeRequestId String?
+  sprintId        String?
+  sprint          Sprint? @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+
+  attachments DeliverableAttachment[]
+  comments    DeliverableComment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, status, orderIndex])
+}
+
+model DeliverableAttachment {
+  id            String      @id @default(cuid())
+  deliverableId String
+  deliverable   Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+
+  uploadedById String?
+  uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  fileName        String
+  fileMimeType    String?
+  fileSizeBytes   Int?
+  storageProvider String?
+  storageKey      String?
+  externalUrl     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([deliverableId])
+}
+
+model DeliverableComment {
+  id            String      @id @default(cuid())
+  deliverableId String
+  deliverable   Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  parentId String?
+  parent   DeliverableComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  DeliverableComment[] @relation("CommentReplies")
+
+  content String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deliverableId, createdAt])
+  @@index([parentId])
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    String // e.g., "COMMENT", "COMMENT_REPLY"
+  title   String
+  message String  @db.Text
+  link    String? // URL to the relevant page
+
+  read   Boolean   @default(false)
+  readAt DateTime?
+
+  metadata String? @db.Text // JSON string for additional data
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+model MagicLinkToken {
+  id     String @id @default(cuid())
+  token  String @unique
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  email     String
+  expiresAt DateTime
+
+  used   Boolean   @default(false)
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([token, used, expiresAt])
+  @@index([email, used])
+}
+
+model Session {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token     String   @unique
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([token, expiresAt])
+  @@index([userId])
+}
+
+model ProjectInvitation {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  email  String
+  userId String?
+  user   User?   @relation("InvitedUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  invitedById String
+  invitedBy   User   @relation("ProjectInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  token     String   @unique
+  expiresAt DateTime
+
+  clientRole      ClientRole?
+  isClientVisible Boolean     @default(true)
+
+  accepted   Boolean   @default(false)
+  acceptedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([token, accepted, expiresAt])
+  @@index([email, accepted])
+  @@index([projectId, accepted])
+}
