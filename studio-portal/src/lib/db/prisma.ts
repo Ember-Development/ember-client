@@ -13,8 +13,9 @@ export const pool =
   globalForPrisma.pool ??
   new Pool({
     connectionString,
-    max: 5,
-    // Try different SSL configuration - only apply SSL when needed
+    max: 1, // Reduced to 1 for serverless - each function gets its own connection
+    idleTimeoutMillis: 20000, // Close idle connections after 20 seconds
+    connectionTimeoutMillis: 5000, // Timeout after 5 seconds if can't connect
     ssl: connectionString.includes("supabase.com") || connectionString.includes("sslmode=require")
       ? {
           rejectUnauthorized: false,
