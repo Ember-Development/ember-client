@@ -7,16 +7,30 @@ const globalForPrisma = globalThis as unknown as {
   pool?: Pool;
 };
 
+// Always use SSL for Supabase connections or when sslmode=require is in the connection string
+const getSSLConfig = () => {
+  const connectionString = process.env.DATABASE_URL || "";
+  
+  // Always apply SSL for Supabase or when explicitly required
+  if (
+    connectionString.includes("supabase.com") ||
+    connectionString.includes("sslmode=require") ||
+    process.env.NODE_ENV === "production"
+  ) {
+    return {
+      rejectUnauthorized: false, // Required for Supabase/self-signed certificates
+    };
+  }
+  
+  return undefined;
+};
+
 export const pool =
   globalForPrisma.pool ??
   new Pool({
     connectionString: process.env.DATABASE_URL,
     max: 5,
-    ssl: process.env.DATABASE_URL?.includes("sslmode=require") || process.env.NODE_ENV === "production"
-      ? {
-          rejectUnauthorized: false, // Required for Supabase/self-signed certificates
-        }
-      : undefined,
+    ssl: getSSLConfig(),
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;
