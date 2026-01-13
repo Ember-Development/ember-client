@@ -12,10 +12,11 @@ export const pool =
   new Pool({
     connectionString: process.env.DATABASE_URL,
     max: 5,
-    ssl: {
-      // Fixes: "self-signed certificate in certificate chain" on Vercel
-      rejectUnauthorized: false,
-    },
+    ssl: process.env.DATABASE_URL?.includes("sslmode=require") || process.env.NODE_ENV === "production"
+      ? {
+          rejectUnauthorized: false, // Required for Supabase/self-signed certificates
+        }
+      : undefined,
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;
