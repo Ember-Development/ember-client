@@ -7,27 +7,19 @@ const globalForPrisma = globalThis as unknown as {
   pool?: Pool;
 };
 
-// Parse connection string and ensure SSL is properly configured
 const connectionString = process.env.DATABASE_URL || "";
-
-// Ensure sslmode=require is in the connection string
-const ensureSSLMode = (url: string): string => {
-  if (url.includes("sslmode=")) {
-    return url;
-  }
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}sslmode=require`;
-};
 
 export const pool =
   globalForPrisma.pool ??
   new Pool({
-    connectionString: ensureSSLMode(connectionString),
+    connectionString,
     max: 5,
-    // Explicitly configure SSL for Supabase Session Pooler
-    ssl: {
-      rejectUnauthorized: false,
-    },
+    // Try different SSL configuration - only apply SSL when needed
+    ssl: connectionString.includes("supabase.com") || connectionString.includes("sslmode=require")
+      ? {
+          rejectUnauthorized: false,
+        }
+      : false,
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;
