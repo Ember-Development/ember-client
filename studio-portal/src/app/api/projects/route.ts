@@ -13,9 +13,10 @@ const createProjectSchema = z.object({
   description: z.string().optional().nullable(),
   status: z.nativeEnum(ProjectStatus).optional(),
   phase: z.nativeEnum(ProjectPhase).optional(),
-  startDate: z.string().datetime().optional().nullable(),
-  targetLaunchDate: z.string().datetime().optional().nullable(),
-  dueDate: z.string().datetime(),
+  // Accept date strings (YYYY-MM-DD) or datetime strings
+  startDate: z.string().optional().nullable(),
+  targetLaunchDate: z.string().optional().nullable(),
+  dueDate: z.string().min(1),
   pricingModel: z.nativeEnum(PricingModel).optional().nullable(),
   weeklyCapacityHours: z.number().int().positive().optional().nullable(),
   hourlyRateCents: z.number().int().positive().optional().nullable(),
@@ -108,6 +109,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Helper function to convert date string to Date object
+    const parseDate = (dateString: string | null | undefined): Date | null => {
+      if (!dateString) return null;
+      // If it's already a datetime string (contains 'T'), use it directly
+      if (dateString.includes('T')) {
+        return new Date(dateString);
+      }
+      // If it's just a date (YYYY-MM-DD), convert to ISO datetime at midnight UTC
+      return new Date(`${dateString}T00:00:00Z`);
+    };
+
     // Create project
     const project = await prisma.project.create({
       data: {
@@ -118,9 +130,9 @@ export async function POST(request: Request) {
         description: data.description || null,
         status: data.status || ProjectStatus.PLANNING,
         phase: data.phase || ProjectPhase.DISCOVERY,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        targetLaunchDate: data.targetLaunchDate ? new Date(data.targetLaunchDate) : null,
-        dueDate: new Date(data.dueDate),
+        startDate: parseDate(data.startDate),
+        targetLaunchDate: parseDate(data.targetLaunchDate),
+        dueDate: parseDate(data.dueDate)!,
         pricingModel: data.pricingModel || PricingModel.TBD,
         weeklyCapacityHours: data.weeklyCapacityHours || null,
         hourlyRateCents: data.hourlyRateCents || null,
