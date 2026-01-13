@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { sendMagicLinkEmail } from "@/lib/email";

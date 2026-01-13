@@ -10,9 +10,12 @@ const globalForPrisma = globalThis as unknown as {
 export const pool =
   globalForPrisma.pool ??
   new Pool({
-    connectionString: process.env.DATABASE_URL, // pooled URL for runtime
-    // optional: keep it conservative in serverless
+    connectionString: process.env.DATABASE_URL,
     max: 5,
+    ssl: {
+      // Fixes: "self-signed certificate in certificate chain" on Vercel
+      rejectUnauthorized: false,
+    },
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;

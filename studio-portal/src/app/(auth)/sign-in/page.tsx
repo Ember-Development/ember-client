@@ -101,45 +101,18 @@ function SignInForm() {
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-emerald-900">
-                        Magic link generated
+                      <h3 className="text-sm font-semibold text-emerald-900 mb-2">
+                        Check your email
                       </h3>
-                      <p className="text-sm text-emerald-700 mt-1">
-                        Check your server console for the authentication link
+                      <p className="text-sm text-emerald-700">
+                        We've sent a magic link to <strong>{email}</strong>. Click the link in the email to sign in.
                       </p>
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg bg-white border border-emerald-200">
-                      <p className="text-xs font-medium text-emerald-900 mb-1">Development Mode</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🔗</span>
-                        <code className="text-xs font-mono text-emerald-700">
-                          MAGIC LINK in console
-                        </code>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-emerald-200">
-                      <ol className="space-y-2 text-xs text-emerald-700">
-                        <li className="flex gap-2">
-                          <span className="font-semibold text-emerald-900">1.</span>
-                          <span>Check your terminal/console output</span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="font-semibold text-emerald-900">2.</span>
-                          <span>Copy the magic link URL</span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="font-semibold text-emerald-900">3.</span>
-                          <span>Paste it in your browser address bar</span>
-                        </li>
-                      </ol>
-                    </div>
-
-                    <p className="text-xs text-emerald-600 pt-2">
-                      Link expires in 15 minutes
+                  <div className="pt-3 border-t border-emerald-200">
+                    <p className="text-xs text-emerald-600">
+                      The link will expire in 15 minutes. If you don't see the email, check your spam folder.
                     </p>
                   </div>
                 </div>
