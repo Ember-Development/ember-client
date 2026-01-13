@@ -241,7 +241,7 @@ export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sp
 
   return (
     <>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4 max-h-[calc(100vh-200px)] overflow-y-auto">
         {columns.map((column) => {
           const columnItems = deliverables.filter((d) => d.status === column.id);
           return (

@@ -35,6 +35,25 @@ interface Project {
   };
 }
 
+interface InternalUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+}
+
+interface ProjectMember {
+  id: string;
+  userId: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    userType: string;
+  };
+}
+
 export default function EditProjectPage() {
   const router = useRouter();
   const params = useParams();
@@ -45,6 +64,12 @@ export default function EditProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [internalUsers, setInternalUsers] = useState<InternalUser[]>([]);
+  const [currentMembers, setCurrentMembers] = useState<ProjectMember[]>([]);
+  const [selectedInternalUserIds, setSelectedInternalUserIds] = useState<string[]>([]);
+  const [newClientEmail, setNewClientEmail] = useState("");
+  const [clientEmails, setClientEmails] = useState<string[]>([]);
+  const [addingMembers, setAddingMembers] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -66,6 +91,8 @@ export default function EditProjectPage() {
   useEffect(() => {
     fetchProject();
     fetchClients();
+    fetchInternalUsers();
+    fetchProjectMembers();
   }, [projectId]);
 
   const fetchProject = async () => {
@@ -109,6 +136,94 @@ export default function EditProjectPage() {
       }
     } catch (err) {
       console.error("Failed to fetch clients:", err);
+    }
+  };
+
+  const fetchInternalUsers = async () => {
+    try {
+      const response = await fetch("/api/users?type=INTERNAL");
+      if (response.ok) {
+        const data = await response.json();
+        setInternalUsers(data.users || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch internal users:", err);
+    }
+  };
+
+  const fetchProjectMembers = async () => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/members`);
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentMembers(data.members || []);
+        // Set selected internal user IDs from current members
+        const internalMemberIds = (data.members || [])
+          .filter((m: ProjectMember) => m.user.userType === "INTERNAL")
+          .map((m: ProjectMember) => m.userId);
+        setSelectedInternalUserIds(internalMemberIds);
+      }
+    } catch (err) {
+      console.error("Failed to fetch project members:", err);
+    }
+  };
+
+  const handleAddClientEmail = () => {
+    if (newClientEmail.trim() && !clientEmails.includes(newClientEmail.trim())) {
+      setClientEmails([...clientEmails, newClientEmail.trim()]);
+      setNewClientEmail("");
+    }
+  };
+
+  const handleRemoveClientEmail = (email: string) => {
+    setClientEmails(clientEmails.filter((e) => e !== email));
+  };
+
+  const handleAddMembers = async () => {
+    setAddingMembers(true);
+    setError(null);
+
+    try {
+      // Add internal users
+      const internalUsersToAdd = selectedInternalUserIds.filter(
+        (id) => !currentMembers.some((m) => m.userId === id)
+      );
+
+      for (const userId of internalUsersToAdd) {
+        const response = await fetch(`/api/projects/${projectId}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to add user ${userId}`);
+        }
+      }
+
+      // Invite client users
+      for (const email of clientEmails) {
+        const response = await fetch(`/api/projects/${projectId}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, clientRole: "CLIENT_ADMIN" }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to invite ${email}`);
+        }
+      }
+
+      // Refresh members list
+      await fetchProjectMembers();
+      setClientEmails([]);
+      setNewClientEmail("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add members");
+    } finally {
+      setAddingMembers(false);
     }
   };
 
@@ -479,6 +594,159 @@ export default function EditProjectPage() {
                 }
               />
             </div>
+          </div>
+
+          {/* Team Members */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">
+              Team Members
+            </h2>
+
+            {/* Current Members */}
+            {currentMembers.length > 0 && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-900 mb-2">
+                  Current Members
+                </label>
+                <div className="space-y-2">
+                  {currentMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50"
+                    >
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-slate-900">
+                          {member.user.firstName && member.user.lastName
+                            ? `${member.user.firstName} ${member.user.lastName}`
+                            : member.user.email}
+                        </div>
+                        <div className="text-xs text-slate-500">{member.user.email}</div>
+                      </div>
+                      <span className="text-xs font-medium px-2 py-1 rounded bg-white text-slate-600 border border-slate-200">
+                        {member.user.userType === "INTERNAL" ? "Internal" : "Client"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add Internal Team Members */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">
+                Add Internal Team Members
+              </label>
+              <div className="space-y-2">
+                {internalUsers.map((user) => {
+                  const isCurrentMember = currentMembers.some((m) => m.userId === user.id);
+                  const isSelected = selectedInternalUserIds.includes(user.id);
+                  
+                  return (
+                    <label
+                      key={user.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                        isCurrentMember
+                          ? "border-slate-200 bg-slate-50 opacity-60"
+                          : "border-slate-200 hover:bg-slate-50 cursor-pointer"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={isCurrentMember}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedInternalUserIds([...selectedInternalUserIds, user.id]);
+                          } else {
+                            setSelectedInternalUserIds(selectedInternalUserIds.filter((id) => id !== user.id));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 disabled:opacity-50"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-slate-900">
+                          {user.firstName && user.lastName
+                            ? `${user.firstName} ${user.lastName}`
+                            : user.email}
+                        </div>
+                        <div className="text-xs text-slate-500">{user.email}</div>
+                      </div>
+                      {isCurrentMember && (
+                        <span className="text-xs text-slate-500">Already a member</span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Invite Client Users */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">
+                Invite Client Users
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="email"
+                  value={newClientEmail}
+                  onChange={(e) => setNewClientEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddClientEmail();
+                    }
+                  }}
+                  placeholder="client@example.com"
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddClientEmail}
+                  disabled={!newClientEmail.trim()}
+                  className="px-4 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              {clientEmails.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {clientEmails.map((email) => (
+                    <span
+                      key={email}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-200"
+                    >
+                      {email}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveClientEmail(email)}
+                        className="hover:text-blue-900"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="mt-2 text-xs text-slate-500">
+                Client users will be invited via email. If they don't have an account, one will be
+                created for them.
+              </p>
+            </div>
+
+            {/* Add Members Button */}
+            {(selectedInternalUserIds.some((id) => !currentMembers.some((m) => m.userId === id)) ||
+              clientEmails.length > 0) && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleAddMembers}
+                  disabled={addingMembers}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {addingMembers ? "Adding..." : "Add Selected Members"}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Actions */}

@@ -7,6 +7,55 @@ import { createMemberAddedUpdate } from "@/lib/projects/updates";
 import { generateToken } from "@/lib/auth/tokens";
 import { sendProjectInvitationEmail } from "@/lib/email";
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    const { projectId } = await params;
+    const { user, project } = await requireProjectAccess(projectId);
+
+    // Only internal users can view all members
+    if (user.userType !== UserType.INTERNAL) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const members = await prisma.projectMember.findMany({
+      where: { projectId: project.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            userType: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return NextResponse.json({
+      members: members.map((member) => ({
+        id: member.id,
+        userId: member.userId,
+        clientRole: member.clientRole,
+        isClientVisible: member.isClientVisible,
+        user: member.user,
+        createdAt: member.createdAt.toISOString(),
+        updatedAt: member.updatedAt.toISOString(),
+      })),
+    });
+  } catch (error) {
+    console.error("Get project members error:", error);
+    return NextResponse.json(
+      { error: "Failed to get project members" },
+      { status: 500 }
+    );
+  }
+}
+
 const addMemberSchema = z.object({
   userId: z.string().optional(),
   email: z.string().email().optional(),

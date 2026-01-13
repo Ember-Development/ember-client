@@ -197,17 +197,17 @@ export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate
 
   return (
     <div
-      className={`${getBgColor()} rounded-xl p-4 min-h-[600px] shrink-0 w-80`}
+      className={`${getBgColor()} rounded-xl p-4 shrink-0 w-80 flex flex-col max-h-[calc(100vh-200px)]`}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <h3 className={`text-sm font-semibold ${getTextColor()}`}>{column.title}</h3>
         <span className={`text-xs font-medium ${getTextColor()} bg-white px-2 py-1 rounded`}>
           {items.length}
         </span>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
         {items.map((item) => (
           <div
             key={item.id}
@@ -246,7 +246,7 @@ export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate
                   onKeyDown={(e) => {
                     if (e.key === "Escape") setEditingAssignee(null);
                   }}
-                  className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 bg-white"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <option value="">Unassigned</option>
@@ -301,7 +301,7 @@ export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate
                     }
                   }}
                   placeholder="Days"
-                  className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 bg-white placeholder:text-slate-400"
                   onClick={(e) => e.stopPropagation()}
                   min="0"
                 />
@@ -338,7 +338,7 @@ export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate
                   onKeyDown={(e) => {
                     if (e.key === "Escape") setEditingSprint(null);
                   }}
-                  className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 bg-white"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <option value="">No Sprint</option>
@@ -392,7 +392,7 @@ export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate
               onKeyDown={handleAddItemKeyDown}
               autoFocus
               placeholder="Enter deliverable title..."
-              className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 bg-white placeholder:text-slate-400"
             />
             <div className="flex items-center gap-2 mt-2">
               <button

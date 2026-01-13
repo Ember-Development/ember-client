@@ -24,3 +24,27 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ensure all inputs and selects have dark, readable text */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+select,
+textarea {
+  color: rgb(15 23 42); /* slate-900 */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgb(148 163 184); /* slate-400 */
+}
+
+option {
+  color: rgb(15 23 42); /* slate-900 */
+  background-color: white;
+}

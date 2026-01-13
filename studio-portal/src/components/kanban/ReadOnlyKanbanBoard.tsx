@@ -74,7 +74,7 @@ export function ReadOnlyKanbanBoard({ projectId, deliverables, sprints = [] }: R
   });
 
   return (
-    <div>
+    <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
       <div className="flex gap-4 overflow-x-auto pb-4">
         {columns.map((column) => {
           const columnDeliverables = deliverablesByStatus[column.id] || [];
