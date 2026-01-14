@@ -22,6 +22,7 @@ interface Attachment {
   fileMimeType: string | null;
   fileSizeBytes: number | null;
   externalUrl: string | null;
+  storageKey: string | null;
   createdAt: string;
 }
 
@@ -428,43 +429,81 @@ export function DeliverableModal({
               </div>
               {attachments.length > 0 ? (
                 <div className="space-y-2">
-                  {attachments.map((attachment) => (
-                    <div
-                      key={attachment.id}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-300"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <svg className="w-5 h-5 text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                        </svg>
-                        <div className="flex-1 min-w-0">
-                          <a
-                            href={attachment.externalUrl || "#"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-semibold text-slate-900 hover:text-blue-600 truncate block"
+                  {attachments.map((attachment) => {
+                    // Check if attachment has a file (old attachments won't have externalUrl or storageKey)
+                    const hasFile = attachment.externalUrl || attachment.storageKey;
+                    
+                    return (
+                      <div
+                        key={attachment.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          hasFile 
+                            ? "bg-slate-50 border-slate-300" 
+                            : "bg-amber-50 border-amber-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <svg 
+                            className={`w-5 h-5 shrink-0 ${
+                              hasFile ? "text-slate-600" : "text-amber-600"
+                            }`} 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
                           >
-                            {attachment.fileName}
-                          </a>
-                          {attachment.fileSizeBytes && (
-                            <p className="text-xs font-medium text-slate-600">
-                              {(attachment.fileSizeBytes / 1024).toFixed(1)} KB
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      {!isReadOnly && (
-                        <button
-                          onClick={() => handleDeleteAttachment(attachment.id)}
-                          className="text-slate-500 hover:text-red-600 transition-colors ml-2 p-1"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                           </svg>
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                          <div className="flex-1 min-w-0">
+                            {hasFile ? (
+                              <>
+                                <a
+                                  href={`/api/projects/${projectId}/deliverables/${deliverable?.id ?? ""}/attachments/${attachment.id}/download`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-semibold text-slate-900 hover:text-blue-600 truncate block"
+                                >
+                                  {attachment.fileName}
+                                </a>
+                                {attachment.fileSizeBytes && (
+                                  <p className="text-xs font-medium text-slate-600">
+                                    {(attachment.fileSizeBytes / 1024).toFixed(1)} KB
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-sm font-semibold text-amber-900 truncate">
+                                  {attachment.fileName}
+                                </p>
+                                <p className="text-xs font-medium text-amber-700 mt-1">
+                                  This attachment was uploaded before file storage was enabled. Please delete and re-upload the file.
+                                </p>
+                                {attachment.fileSizeBytes && (
+                                  <p className="text-xs font-medium text-amber-600 mt-0.5">
+                                    {(attachment.fileSizeBytes / 1024).toFixed(1)} KB
+                                  </p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => handleDeleteAttachment(attachment.id)}
+                            className={`transition-colors ml-2 p-1 ${
+                              hasFile 
+                                ? "text-slate-500 hover:text-red-600" 
+                                : "text-amber-600 hover:text-red-600"
+                            }`}
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm font-medium text-slate-600 italic">
