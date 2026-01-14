@@ -4,6 +4,7 @@ import { useState } from "react";
 import { KanbanBoard } from "./KanbanBoard";
 import { DeliverablesListView } from "./DeliverablesListView";
 import { ViewToggle } from "./ViewToggle";
+import { SprintSelector } from "@/components/sprints/SprintSelector";
 
 interface Deliverable {
   id: string;
@@ -51,6 +52,12 @@ export function DeliverablesView({
   defaultView = "kanban",
 }: DeliverablesViewProps) {
   const [view, setView] = useState<"kanban" | "list">(defaultView);
+  const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
+
+  // Filter deliverables by sprint
+  const filteredDeliverables = selectedSprintId
+    ? initialDeliverables.filter((d) => d.sprintId === selectedSprintId)
+    : initialDeliverables;
 
   return (
     <div>
@@ -61,24 +68,41 @@ export function DeliverablesView({
             {view === "kanban" ? "Kanban Board" : "List View"}
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            {initialDeliverables.length} {initialDeliverables.length === 1 ? "deliverable" : "deliverables"}
+            {filteredDeliverables.length} {filteredDeliverables.length === 1 ? "deliverable" : "deliverables"}
+            {selectedSprintId && (
+              <span className="ml-2 text-slate-500">
+                (filtered by sprint)
+              </span>
+            )}
           </p>
         </div>
-        <ViewToggle view={view} onViewChange={setView} />
+        <div className="flex items-center gap-3">
+          {/* Sprint Filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-slate-600 whitespace-nowrap">Filter by Sprint:</label>
+            <SprintSelector
+              sprints={sprints}
+              selectedSprintId={selectedSprintId}
+              onChange={setSelectedSprintId}
+              className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+            />
+          </div>
+          <ViewToggle view={view} onViewChange={setView} />
+        </div>
       </div>
 
       {/* View Content */}
       {view === "kanban" ? (
         <KanbanBoard
           projectId={projectId}
-          initialDeliverables={initialDeliverables}
+          initialDeliverables={filteredDeliverables}
           projectMembers={projectMembers}
           sprints={sprints}
         />
       ) : (
         <DeliverablesListView
           projectId={projectId}
-          deliverables={initialDeliverables}
+          deliverables={filteredDeliverables}
           projectMembers={projectMembers}
           sprints={sprints}
           onUpdate={async (id, updates) => {
