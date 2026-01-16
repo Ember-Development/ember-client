@@ -317,10 +317,18 @@ export default async function PortalProjectPage({ params }: { params: Promise<{ 
                   {milestonesWithProgress.length} milestone{milestonesWithProgress.length !== 1 ? "s" : ""} in progress
                 </p>
               </div>
+              {milestonesWithProgress.length > 5 && (
+                <a
+                  href={`/portal/projects/${projectId}/milestones`}
+                  className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                >
+                  See All →
+                </a>
+              )}
             </div>
           </div>
           <div className="p-6">
-            <ClientMilestonesList milestones={milestonesWithProgress} projectId={project.id} />
+            <ClientMilestonesList milestones={milestonesWithProgress.slice(0, 5)} projectId={project.id} />
           </div>
         </section>
 
@@ -380,6 +388,14 @@ export default async function PortalProjectPage({ params }: { params: Promise<{ 
                 Stay informed about project progress and changes
               </p>
             </div>
+            {updates.length > 5 && (
+              <a
+                href={`/portal/projects/${projectId}/updates`}
+                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                See All →
+              </a>
+            )}
           </div>
         </div>
         <div className="divide-y divide-slate-100">
@@ -392,7 +408,7 @@ export default async function PortalProjectPage({ params }: { params: Promise<{ 
               <p className="mt-1 text-xs text-slate-500">Updates will appear here as the project progresses</p>
             </div>
           ) : (
-            updates.map((update) => (
+            updates.slice(0, 5).map((update) => (
               <div key={update.id} className="px-6 py-5 hover:bg-slate-50/50 transition-colors">
                 <div className="flex items-start gap-4">
                   <div className="shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">

@@ -211,7 +211,7 @@ export async function POST(request: Request) {
         for (const email of newEmails) {
           const token = generateToken();
           const expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+          expiresAt.setDate(expiresAt.getDate() + 3); // 3 days
 
           try {
             const invitation = await prisma.projectInvitation.create({

@@ -5,10 +5,22 @@ import Link from "next/link";
 
 export default async function InternalProjectsPage() {
   const user = await requireInternalUser();
-  const isAdmin = user.internalRole === InternalRole.ADMIN || user.internalRole === InternalRole.OWNER;
+  const isAdmin = user.internalRole === InternalRole.ADMIN;
+
+  // If user is not ADMIN (i.e., OWNER or MEMBER), only show projects they're assigned to
+  const whereClause = isAdmin
+    ? { tenantId: user.tenantId }
+    : {
+        tenantId: user.tenantId,
+        members: {
+          some: {
+            userId: user.id,
+          },
+        },
+      };
 
   const projects = await prisma.project.findMany({
-    where: { tenantId: user.tenantId },
+    where: whereClause,
     include: { client: true },
     orderBy: { updatedAt: "desc" },
   });

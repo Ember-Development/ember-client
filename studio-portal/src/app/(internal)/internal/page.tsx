@@ -1,12 +1,28 @@
 import { requireInternalUser } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
+import { InternalRole, ProjectStatus } from ".prisma/client";
 
 export default async function InternalDashboard() {
   const user = await requireInternalUser();
+  const isAdmin = user.internalRole === InternalRole.ADMIN;
 
   const now = new Date();
+
+  // If user is not ADMIN (i.e., OWNER or MEMBER), only show projects they're assigned to
+  const whereClause = isAdmin
+    ? { tenantId: user.tenantId, status: { in: [ProjectStatus.ACTIVE, ProjectStatus.PLANNING] } }
+    : {
+        tenantId: user.tenantId,
+        status: { in: [ProjectStatus.ACTIVE, ProjectStatus.PLANNING] },
+        members: {
+          some: {
+            userId: user.id,
+          },
+        },
+      };
+
   const projects = await prisma.project.findMany({
-    where: { tenantId: user.tenantId, status: { in: ["ACTIVE", "PLANNING"] } },
+    where: whereClause,
     include: { 
       client: true,
       sprints: {

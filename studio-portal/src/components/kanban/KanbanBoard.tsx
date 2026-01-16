@@ -52,6 +52,11 @@ export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sp
   const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
   const [sprints, setSprints] = useState<Array<{ id: string; name: string; startDate: string; endDate: string }>>(initialSprints);
 
+  // Sync deliverables when initialDeliverables prop changes (e.g., when sprint filter changes)
+  useEffect(() => {
+    setDeliverables(initialDeliverables);
+  }, [initialDeliverables]);
+
   // Fetch sprints on mount if not provided
   useEffect(() => {
     if (initialSprints.length === 0) {

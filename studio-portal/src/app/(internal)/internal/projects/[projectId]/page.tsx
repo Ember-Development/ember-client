@@ -496,9 +496,19 @@ export default async function InternalProjectDetail({ params }: { params: Promis
 
         {/* Latest Updates */}
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100">
-            <h2 className="text-lg font-semibold text-slate-900">Latest Updates</h2>
-            <p className="mt-1 text-sm text-slate-500">{updates.length} recent</p>
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Latest Updates</h2>
+              <p className="mt-1 text-sm text-slate-500">{updates.length} recent</p>
+            </div>
+            {updates.length > 5 && (
+              <a
+                href={`/internal/projects/${project.id}/updates`}
+                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                See All →
+              </a>
+            )}
           </div>
           <div className="divide-y divide-slate-100">
             {updates.length === 0 ? (
@@ -506,7 +516,7 @@ export default async function InternalProjectDetail({ params }: { params: Promis
                 No updates yet.
               </div>
             ) : (
-              updates.map((u) => (
+              updates.slice(0, 5).map((u) => (
                 <div key={u.id} className="px-6 py-4">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <h3 className="text-sm font-semibold text-slate-900">{u.title ?? u.type}</h3>

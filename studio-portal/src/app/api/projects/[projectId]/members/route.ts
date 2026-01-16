@@ -131,7 +131,7 @@ export async function POST(
       // Generate invitation token
       const token = generateToken();
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+      expiresAt.setDate(expiresAt.getDate() + 3); // 3 days
 
       // Create invitation
       const invitation = await prisma.projectInvitation.create({

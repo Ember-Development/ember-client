@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     // Generate magic link token for invitation
     const token = generateToken();
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days for invitations
+    expiresAt.setDate(expiresAt.getDate() + 3); // 3 days for invitations
 
     // Invalidate any existing unused tokens for this user
     await prisma.magicLinkToken.updateMany({
