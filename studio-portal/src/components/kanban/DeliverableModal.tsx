@@ -26,6 +26,14 @@ interface Attachment {
   createdAt: string;
 }
 
+interface DeliverableTask {
+  id: string;
+  title: string;
+  completed: boolean;
+  completedAt: string | null;
+  orderIndex: number;
+}
+
 interface ProjectMember {
   id: string;
   email: string;
@@ -98,6 +106,8 @@ export function DeliverableModal({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tasks, setTasks] = useState<DeliverableTask[]>([]);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
 
   useEffect(() => {
     if (deliverable) {
@@ -110,6 +120,7 @@ export function DeliverableModal({
       setEstimateDays(deliverable.estimateDays?.toString() || "");
       setSprintId(deliverable.sprintId);
       fetchAttachments();
+      fetchTasks();
     } else {
       resetForm();
     }
@@ -125,6 +136,8 @@ export function DeliverableModal({
     setEstimateDays("");
     setSprintId(null);
     setAttachments([]);
+    setTasks([]);
+    setNewTaskTitle("");
   };
 
   const fetchAttachments = async () => {
@@ -137,6 +150,86 @@ export function DeliverableModal({
       }
     } catch (error) {
       console.error("Failed to fetch attachments:", error);
+    }
+  };
+
+  const fetchTasks = async () => {
+    if (!deliverable) return;
+    try {
+      const response = await fetch(`/api/projects/${projectId}/deliverables/${deliverable.id}/tasks`);
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data.tasks || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch tasks:", error);
+    }
+  };
+
+  const handleCreateTask = async () => {
+    if (!newTaskTitle.trim() || !deliverable) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${projectId}/deliverables/${deliverable.id}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTaskTitle.trim() }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTasks([...tasks, data.task]);
+        setNewTaskTitle("");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to create task");
+      }
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      alert("Failed to create task");
+    }
+  };
+
+  const handleToggleTask = async (taskId: string, completed: boolean) => {
+    if (!deliverable) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${projectId}/deliverables/${deliverable.id}/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !completed }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(tasks.map(t => t.id === taskId ? data.task : t));
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to update task");
+      }
+    } catch (error) {
+      console.error("Failed to toggle task:", error);
+      alert("Failed to update task");
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!deliverable) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${projectId}/deliverables/${deliverable.id}/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      
+      if (response.ok) {
+        setTasks(tasks.filter(t => t.id !== taskId));
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to delete task");
+      }
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      alert("Failed to delete task");
     }
   };
 
@@ -404,6 +497,74 @@ export function DeliverableModal({
                   className="w-full px-4 py-3 text-sm text-slate-900 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none placeholder:text-slate-400"
                   placeholder="Add a description..."
                 />
+              )}
+            </div>
+
+            {/* Tasks */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">
+                Tasks
+              </label>
+              {!isReadOnly && deliverable && (
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleCreateTask()}
+                    placeholder="Add a task..."
+                    className="flex-1 px-3 py-2 text-sm text-slate-900 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-slate-400"
+                  />
+                  <button
+                    onClick={handleCreateTask}
+                    disabled={!newTaskTitle.trim()}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+              {tasks.length === 0 ? (
+                <p className="text-sm font-medium text-slate-600 italic">
+                  No tasks yet. {!isReadOnly && deliverable && "Add a task above to get started."}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => !isReadOnly && handleToggleTask(task.id, task.completed)}
+                        disabled={isReadOnly}
+                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
+                      />
+                      <span
+                        className={`flex-1 text-sm ${
+                          task.completed
+                            ? "line-through text-slate-500"
+                            : "text-slate-900"
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+                      {!isReadOnly && (
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                          title="Delete task"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 

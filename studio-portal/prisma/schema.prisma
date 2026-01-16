@@ -406,6 +406,7 @@ model Deliverable {
 
   attachments DeliverableAttachment[]
   comments    DeliverableComment[]
+  tasks       DeliverableTask[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -452,6 +453,22 @@ model DeliverableComment {
 
   @@index([deliverableId, createdAt])
   @@index([parentId])
+}
+
+model DeliverableTask {
+  id            String      @id @default(cuid())
+  deliverableId String
+  deliverable   Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+
+  title       String
+  completed   Boolean      @default(false)
+  completedAt DateTime?
+  orderIndex  Int          @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deliverableId, orderIndex])
 }
 
 model Notification {
