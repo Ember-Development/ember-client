@@ -46,6 +46,12 @@ interface Sprint {
   endDate: string;
 }
 
+interface Epic {
+  id: string;
+  title: string;
+  status: string;
+}
+
 interface KanbanColumnProps {
   column: { id: string; title: string; color: string };
   items: Deliverable[];
@@ -55,15 +61,17 @@ interface KanbanColumnProps {
   onUpdate: (id: string, updates: Partial<Deliverable>) => Promise<void>;
   projectMembers: ProjectMember[];
   sprints: Sprint[];
+  epics: Epic[];
 }
 
-export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate, projectMembers, sprints }: KanbanColumnProps) {
+export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate, projectMembers, sprints, epics }: KanbanColumnProps) {
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState("");
   const [editingAssignee, setEditingAssignee] = useState<string | null>(null);
   const [editingEstimate, setEditingEstimate] = useState<string | null>(null);
   const [editingSprint, setEditingSprint] = useState<string | null>(null);
+  const [editingEpic, setEditingEpic] = useState<string | null>(null);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -392,6 +400,51 @@ export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate
                 </button>
               )}
             </div>
+
+            {/* Epic Selector */}
+            {epics.length > 0 && (
+              <div 
+                className="mb-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {editingEpic === item.id ? (
+                  <select
+                    autoFocus
+                    value={item.epicId || ""}
+                    onChange={async (e) => {
+                      await onUpdate(item.id, { epicId: e.target.value || null });
+                      setEditingEpic(null);
+                    }}
+                    onBlur={() => setEditingEpic(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setEditingEpic(null);
+                    }}
+                    className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 bg-white"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <option value="">No Epic</option>
+                    {epics.map((epic) => (
+                      <option key={epic.id} value={epic.id}>
+                        {epic.title}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingEpic(item.id);
+                    }}
+                    className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1"
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    {item.epic ? item.epic.title : "Set epic"}
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
               <span className={`font-medium ${getPriorityColor(item.priority)}`}>

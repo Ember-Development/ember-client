@@ -304,6 +304,7 @@ export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sp
                             dueDate: updated.dueDate ? new Date(updated.dueDate) : null,
                             assignee: updated.assignee || d.assignee,
                             sprint: updated.sprint || d.sprint,
+                            epic: updated.epic || d.epic,
                           }
                         : d
                     ));
@@ -314,6 +315,7 @@ export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sp
               }}
               projectMembers={projectMembers}
               sprints={sprints}
+              epics={epics}
             />
           );
         })}
