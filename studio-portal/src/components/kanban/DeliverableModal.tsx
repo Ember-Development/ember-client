@@ -131,6 +131,7 @@ export function DeliverableModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<DeliverableTask[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
@@ -165,6 +166,7 @@ export function DeliverableModal({
     setAttachments([]);
     setTasks([]);
     setNewTaskTitle("");
+    setNewTaskDescription("");
   };
 
   const fetchAttachments = async () => {
@@ -200,13 +202,17 @@ export function DeliverableModal({
       const response = await fetch(`/api/projects/${projectId}/deliverables/${deliverable.id}/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTaskTitle.trim() }),
+        body: JSON.stringify({ 
+          title: newTaskTitle.trim(),
+          description: newTaskDescription.trim() || null,
+        }),
       });
       
       if (response.ok) {
         const data = await response.json();
         setTasks([...tasks, data.task]);
         setNewTaskTitle("");
+        setNewTaskDescription("");
         setExpandedTasks(new Set([...expandedTasks, data.task.id]));
       } else {
         const error = await response.json();
@@ -578,22 +584,36 @@ export function DeliverableModal({
                 )}
               </div>
               {!isReadOnly && deliverable && (
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="text"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleCreateTask()}
-                    placeholder="Add a sub-item..."
-                    className="flex-1 px-3 py-2 text-sm text-slate-900 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-slate-400"
-                  />
-                  <button
-                    onClick={handleCreateTask}
-                    disabled={!newTaskTitle.trim()}
-                    className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Add
-                  </button>
+                <div className="space-y-2 mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      placeholder="Enter sub-item title..."
+                      className="w-full px-3 py-2 text-sm text-slate-900 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-slate-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Description</label>
+                    <textarea
+                      value={newTaskDescription}
+                      onChange={(e) => setNewTaskDescription(e.target.value)}
+                      placeholder="Enter sub-item description (optional)..."
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm text-slate-900 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-slate-400 resize-none"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleCreateTask}
+                      disabled={!newTaskTitle.trim()}
+                      className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Sub-item
+                    </button>
+                  </div>
                 </div>
               )}
               {tasks.length === 0 ? (
