@@ -2,6 +2,7 @@ import { requireProjectAccess } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { UserType, InternalRole } from ".prisma/client";
 import { SprintManagement } from "@/components/sprints/SprintManagement";
+import { EpicManagement } from "@/components/epics/EpicManagement";
 import { DeliverablesView } from "@/components/kanban/DeliverablesView";
 import { PhaseSelector } from "@/components/projects/PhaseSelector";
 import { ChangeRequestReview } from "@/components/change-requests/ChangeRequestReview";
@@ -385,7 +386,30 @@ export default async function InternalProjectDetail({ params }: { params: Promis
         </div>
       </div>
 
-      {/* Deliverables View (Kanban/List Toggle) */}
+      {/* Epic Management */}
+      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-100">
+          <h2 className="text-lg font-semibold text-slate-900">Epic Management</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Organize deliverables into epics for better project structure
+          </p>
+        </div>
+        <div className="p-6">
+          <EpicManagement
+            projectId={project.id}
+            projectMembers={projectMembers
+              .filter((pm) => pm.user && pm.user.userType === "INTERNAL")
+              .map((pm) => ({
+                id: pm.user!.id,
+                email: pm.user!.email,
+                firstName: pm.user!.firstName,
+                lastName: pm.user!.lastName,
+              }))}
+          />
+        </div>
+      </section>
+
+        {/* Deliverables View (Kanban/List Toggle) */}
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100">
           <div className="flex items-center justify-between">
