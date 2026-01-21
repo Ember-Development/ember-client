@@ -105,6 +105,12 @@ export default async function PortalProjectPage({ params }: { params: Promise<{ 
             name: true,
           },
         },
+        epic: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
       },
     }),
     prisma.sprint.findMany({
@@ -291,6 +297,7 @@ export default async function PortalProjectPage({ params }: { params: Promise<{ 
               dueDate: d.dueDate ? new Date(d.dueDate) : null,
               assignee: d.assignee,
               sprint: d.sprint,
+              epic: d.epic,
             }))}
             sprints={sprints.map((s) => ({
               id: s.id,

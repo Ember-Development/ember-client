@@ -11,7 +11,7 @@ export default async function KanbanPage({ params }: { params: Promise<{ project
   if (user.userType !== UserType.INTERNAL) return null;
 
   const now = new Date();
-  const [deliverables, projectMembers, activeSprint, sprints] = await Promise.all([
+  const [deliverables, projectMembers, activeSprint, sprints, epics] = await Promise.all([
     prisma.deliverable.findMany({
       where: { projectId: project.id },
       orderBy: { orderIndex: "asc" },
@@ -28,6 +28,17 @@ export default async function KanbanPage({ params }: { params: Promise<{ project
           select: {
             id: true,
             name: true,
+          },
+        },
+        epic: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        _count: {
+          select: {
+            tasks: true,
           },
         },
       },
@@ -65,6 +76,15 @@ export default async function KanbanPage({ params }: { params: Promise<{ project
     prisma.sprint.findMany({
       where: { projectId: project.id },
       orderBy: { startDate: "desc" },
+    }),
+    prisma.epic.findMany({
+      where: { projectId: project.id },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+      },
+      orderBy: { orderIndex: "asc" },
     }),
   ]);
 
@@ -147,6 +167,8 @@ export default async function KanbanPage({ params }: { params: Promise<{ project
             dueDate: d.dueDate ? new Date(d.dueDate) : null,
             assignee: d.assignee,
             sprint: d.sprint,
+            epic: d.epic,
+            taskCount: d._count.tasks,
           }))}
           projectMembers={internalMembers}
           sprints={sprints.map((s) => ({
@@ -155,6 +177,7 @@ export default async function KanbanPage({ params }: { params: Promise<{ project
             startDate: s.startDate.toISOString(),
             endDate: s.endDate.toISOString(),
           }))}
+          epics={epics}
           defaultView="kanban"
         />
       </div>

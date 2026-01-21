@@ -23,6 +23,11 @@ interface Deliverable {
     id: string;
     name: string;
   } | null;
+  epicId: string | null;
+  epic: {
+    id: string;
+    title: string;
+  } | null;
   orderIndex: number;
 }
 

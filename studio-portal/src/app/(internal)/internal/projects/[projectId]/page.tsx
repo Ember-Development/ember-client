@@ -114,6 +114,18 @@ export default async function InternalProjectDetail({ params }: { params: Promis
             name: true,
           },
         },
+        epic: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        tasks: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
       },
     }),
     prisma.projectMember.findMany({
