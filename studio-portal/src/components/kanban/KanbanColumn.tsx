@@ -22,7 +22,14 @@ interface Deliverable {
     id: string;
     name: string;
   } | null;
+  epicId: string | null;
+  epic: {
+    id: string;
+    title: string;
+  } | null;
   orderIndex: number;
+  taskCount?: number;
+  completedTaskCount?: number;
 }
 
 interface ProjectMember {
@@ -218,15 +225,37 @@ export function KanbanColumn({ column, items, onMove, onEdit, onCreate, onUpdate
               item.status === "DONE" ? "opacity-90" : ""
             }`}
           >
-            <h4
-              className={`text-sm font-semibold text-slate-900 mb-2 ${
-                item.status === "DONE" ? "line-through" : ""
-              }`}
-            >
-              {item.title}
-            </h4>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <h4
+                className={`text-sm font-semibold text-slate-900 flex-1 ${
+                  item.status === "DONE" ? "line-through" : ""
+                }`}
+              >
+                {item.title}
+              </h4>
+              {item.epic && (
+                <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700 font-medium shrink-0">
+                  {item.epic.title}
+                </span>
+              )}
+            </div>
             {item.description && (
               <p className="text-xs text-slate-600 line-clamp-2 mb-2">{item.description}</p>
+            )}
+            {/* Task Progress */}
+            {item.taskCount !== undefined && item.taskCount > 0 && (
+              <div className="mb-2">
+                <div className="flex items-center justify-between text-xs text-slate-600 mb-1">
+                  <span>Tasks</span>
+                  <span>{item.completedTaskCount || 0}/{item.taskCount}</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-1.5">
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full transition-all"
+                    style={{ width: `${((item.completedTaskCount || 0) / item.taskCount) * 100}%` }}
+                  />
+                </div>
+              </div>
             )}
             
             {/* Assignee */}

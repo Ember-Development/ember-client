@@ -13,6 +13,7 @@ const createSchema = z.object({
   assigneeId: z.string().nullable().optional(),
   estimateDays: z.number().int().min(0).nullable().optional(),
   sprintId: z.string().nullable().optional(),
+  epicId: z.string().nullable().optional(),
 });
 
 export async function POST(
@@ -47,6 +48,7 @@ export async function POST(
         assigneeId: data.assigneeId || null,
         estimateDays: data.estimateDays || null,
         sprintId: data.sprintId || null,
+        epicId: data.epicId || null,
         clientVisible: true, // Default to visible for clients
         orderIndex: (maxOrder?.orderIndex ?? -1) + 1,
       },
@@ -65,6 +67,12 @@ export async function POST(
             name: true,
           },
         },
+        epic: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
       },
     });
 
@@ -74,6 +82,7 @@ export async function POST(
       dueDate: deliverable.dueDate?.toISOString() || null,
       assignee: deliverable.assignee,
       sprint: deliverable.sprint,
+      epic: deliverable.epic,
     });
   } catch (error) {
     console.error("Create deliverable error:", error);

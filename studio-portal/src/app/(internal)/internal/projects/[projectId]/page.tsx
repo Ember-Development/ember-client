@@ -65,7 +65,7 @@ export default async function InternalProjectDetail({ params }: { params: Promis
 
   const isAdmin = user.internalRole === InternalRole.ADMIN || user.internalRole === InternalRole.OWNER;
 
-  const [milestones, updates, docs, changeRequests, deliverables, projectMembers, sprints] = await Promise.all([
+  const [milestones, updates, docs, changeRequests, deliverables, projectMembers, sprints, epics] = await Promise.all([
     prisma.milestone.findMany({
       where: { projectId: project.id },
       orderBy: [{ orderIndex: "asc" }, { createdAt: "asc" }],
@@ -133,6 +133,15 @@ export default async function InternalProjectDetail({ params }: { params: Promis
     prisma.sprint.findMany({
       where: { projectId: project.id },
       orderBy: { startDate: "desc" },
+    }),
+    prisma.epic.findMany({
+      where: { projectId: project.id },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+      },
+      orderBy: { orderIndex: "asc" },
     }),
   ]);
 
@@ -384,6 +393,10 @@ export default async function InternalProjectDetail({ params }: { params: Promis
               dueDate: d.dueDate ? new Date(d.dueDate) : null,
               assignee: d.assignee,
               sprint: d.sprint,
+              epic: d.epic,
+              epicId: d.epicId,
+              taskCount: d.tasks?.length || 0,
+              completedTaskCount: d.tasks?.filter((t) => t.status === "DONE").length || 0,
             }))}
             projectMembers={projectMembers
               .filter((pm) => pm.user && pm.user.userType === "INTERNAL")
@@ -399,6 +412,7 @@ export default async function InternalProjectDetail({ params }: { params: Promis
               startDate: s.startDate.toISOString(),
               endDate: s.endDate.toISOString(),
             }))}
+            epics={epics}
           />
         </div>
       </section>

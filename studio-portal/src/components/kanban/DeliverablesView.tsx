@@ -5,6 +5,7 @@ import { KanbanBoard } from "./KanbanBoard";
 import { DeliverablesListView } from "./DeliverablesListView";
 import { ViewToggle } from "./ViewToggle";
 import { SprintSelector } from "@/components/sprints/SprintSelector";
+import { EpicSelector } from "@/components/epics/EpicSelector";
 
 interface Deliverable {
   id: string;
@@ -26,6 +27,11 @@ interface Deliverable {
     id: string;
     name: string;
   } | null;
+  epicId: string | null;
+  epic: {
+    id: string;
+    title: string;
+  } | null;
   orderIndex: number;
 }
 
@@ -41,6 +47,7 @@ interface DeliverablesViewProps {
   initialDeliverables: Deliverable[];
   projectMembers: ProjectMember[];
   sprints: Array<{ id: string; name: string; startDate: string; endDate: string }>;
+  epics?: Array<{ id: string; title: string; status: string }>;
   defaultView?: "kanban" | "list";
 }
 
@@ -49,15 +56,19 @@ export function DeliverablesView({
   initialDeliverables,
   projectMembers,
   sprints,
+  epics = [],
   defaultView = "kanban",
 }: DeliverablesViewProps) {
   const [view, setView] = useState<"kanban" | "list">(defaultView);
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
+  const [selectedEpicId, setSelectedEpicId] = useState<string | null>(null);
 
-  // Filter deliverables by sprint
-  const filteredDeliverables = selectedSprintId
-    ? initialDeliverables.filter((d) => d.sprintId === selectedSprintId)
-    : initialDeliverables;
+  // Filter deliverables by sprint and/or epic
+  const filteredDeliverables = initialDeliverables.filter((d) => {
+    if (selectedSprintId && d.sprintId !== selectedSprintId) return false;
+    if (selectedEpicId && d.epicId !== selectedEpicId) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -69,9 +80,9 @@ export function DeliverablesView({
           </h2>
           <p className="mt-1 text-sm text-slate-600">
             {filteredDeliverables.length} {filteredDeliverables.length === 1 ? "deliverable" : "deliverables"}
-            {selectedSprintId && (
+            {(selectedSprintId || selectedEpicId) && (
               <span className="ml-2 text-slate-500">
-                (filtered by sprint)
+                (filtered)
               </span>
             )}
           </p>
@@ -79,7 +90,7 @@ export function DeliverablesView({
         <div className="flex items-center gap-3">
           {/* Sprint Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-600 whitespace-nowrap">Filter by Sprint:</label>
+            <label className="text-sm text-slate-600 whitespace-nowrap">Sprint:</label>
             <SprintSelector
               sprints={sprints}
               selectedSprintId={selectedSprintId}
@@ -87,6 +98,18 @@ export function DeliverablesView({
               className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
             />
           </div>
+          {/* Epic Filter */}
+          {epics.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-slate-600 whitespace-nowrap">Epic:</label>
+              <EpicSelector
+                epics={epics}
+                selectedEpicId={selectedEpicId}
+                onChange={setSelectedEpicId}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              />
+            </div>
+          )}
           <ViewToggle view={view} onViewChange={setView} />
         </div>
       </div>
@@ -98,6 +121,7 @@ export function DeliverablesView({
           initialDeliverables={filteredDeliverables}
           projectMembers={projectMembers}
           sprints={sprints}
+          epics={epics}
         />
       ) : (
         <DeliverablesListView

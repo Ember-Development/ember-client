@@ -14,6 +14,7 @@ const updateSchema = z.object({
   assigneeId: z.string().nullable().optional(),
   estimateDays: z.number().int().min(0).nullable().optional(),
   sprintId: z.string().nullable().optional(),
+  epicId: z.string().nullable().optional(),
   clientVisible: z.boolean().optional(),
 });
 
@@ -49,6 +50,7 @@ export async function PATCH(
     if (data.assigneeId !== undefined) updateData.assigneeId = data.assigneeId;
     if (data.estimateDays !== undefined) updateData.estimateDays = data.estimateDays;
     if (data.sprintId !== undefined) updateData.sprintId = data.sprintId;
+    if (data.epicId !== undefined) updateData.epicId = data.epicId;
     if (data.clientVisible !== undefined) updateData.clientVisible = data.clientVisible;
 
     const deliverable = await prisma.deliverable.update({
@@ -67,6 +69,12 @@ export async function PATCH(
           select: {
             id: true,
             name: true,
+          },
+        },
+        epic: {
+          select: {
+            id: true,
+            title: true,
           },
         },
       },
@@ -97,6 +105,7 @@ export async function PATCH(
       dueDate: deliverable.dueDate?.toISOString() || null,
       assignee: deliverable.assignee,
       sprint: deliverable.sprint,
+      epic: deliverable.epic,
     });
   } catch (error) {
     console.error("Update deliverable error:", error);

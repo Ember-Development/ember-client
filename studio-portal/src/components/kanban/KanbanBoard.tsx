@@ -25,7 +25,14 @@ interface Deliverable {
     id: string;
     name: string;
   } | null;
+  epicId: string | null;
+  epic: {
+    id: string;
+    title: string;
+  } | null;
   orderIndex: number;
+  taskCount?: number;
+  completedTaskCount?: number;
 }
 
 interface ProjectMember {
@@ -40,9 +47,10 @@ interface KanbanBoardProps {
   initialDeliverables: Deliverable[];
   projectMembers: ProjectMember[];
   sprints?: Array<{ id: string; name: string; startDate: string; endDate: string }>;
+  epics?: Array<{ id: string; title: string; status: string }>;
 }
 
-export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sprints: initialSprints = [] }: KanbanBoardProps) {
+export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sprints: initialSprints = [], epics = [] }: KanbanBoardProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [deliverables, setDeliverables] = useState<Deliverable[]>(initialDeliverables);
@@ -51,6 +59,10 @@ export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sp
   const [isCreating, setIsCreating] = useState(false);
   const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
   const [sprints, setSprints] = useState<Array<{ id: string; name: string; startDate: string; endDate: string }>>(initialSprints);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterEpicId, setFilterEpicId] = useState<string | null>(null);
+  const [filterAssigneeId, setFilterAssigneeId] = useState<string | null>(null);
+  const [filterPriority, setFilterPriority] = useState<string | null>(null);
 
   // Sync deliverables when initialDeliverables prop changes (e.g., when sprint filter changes)
   useEffect(() => {
@@ -97,6 +109,24 @@ export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sp
     { id: "BLOCKED", title: "Blocked", color: "red" },
     { id: "DONE", title: "Done", color: "emerald" },
   ] as const;
+
+  // Filter deliverables based on search and filters
+  const filteredDeliverables = deliverables.filter((d) => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesTitle = d.title.toLowerCase().includes(query);
+      const matchesDescription = d.description?.toLowerCase().includes(query) || false;
+      if (!matchesTitle && !matchesDescription) return false;
+    }
+    // Epic filter
+    if (filterEpicId && d.epicId !== filterEpicId) return false;
+    // Assignee filter
+    if (filterAssigneeId && d.assigneeId !== filterAssigneeId) return false;
+    // Priority filter
+    if (filterPriority && d.priority !== filterPriority) return false;
+    return true;
+  });
 
   const handleMove = async (deliverableId: string, newStatus: string, newOrderIndex: number) => {
     // Optimistically update the UI
@@ -248,7 +278,7 @@ export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sp
     <>
       <div className="flex gap-4 overflow-x-auto pb-4 max-h-[calc(100vh-200px)] overflow-y-auto">
         {columns.map((column) => {
-          const columnItems = deliverables.filter((d) => d.status === column.id);
+          const columnItems = filteredDeliverables.filter((d) => d.status === column.id);
           return (
             <KanbanColumn
               key={column.id}
@@ -303,6 +333,7 @@ export function KanbanBoard({ projectId, initialDeliverables, projectMembers, sp
           onDelete={selectedDeliverable ? () => handleDelete(selectedDeliverable.id) : undefined}
           projectMembers={projectMembers}
           sprints={sprints}
+          epics={epics}
           projectId={projectId}
           highlightCommentId={highlightCommentId}
         />

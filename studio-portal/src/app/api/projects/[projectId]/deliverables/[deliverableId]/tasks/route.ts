@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { requireProjectAccess } from "@/lib/auth/guards";
 import { z } from "zod";
+import { DeliverableTaskStatus, Priority } from ".prisma/client";
 
 const createTaskSchema = z.object({
   title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  status: z.nativeEnum(DeliverableTaskStatus).optional(),
+  assigneeId: z.string().optional().nullable(),
+  priority: z.nativeEnum(Priority).optional(),
+  dueDate: z.string().optional().nullable(),
+  estimateHours: z.number().optional().nullable(),
 });
 
 export async function GET(
@@ -30,6 +37,16 @@ export async function GET(
 
     const tasks = await prisma.deliverableTask.findMany({
       where: { deliverableId: deliverable.id },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
       orderBy: { orderIndex: "asc" },
     });
 
@@ -39,6 +56,7 @@ export async function GET(
         createdAt: t.createdAt.toISOString(),
         updatedAt: t.updatedAt.toISOString(),
         completedAt: t.completedAt?.toISOString() || null,
+        dueDate: t.dueDate?.toISOString() || null,
       })),
     });
   } catch (error) {
@@ -72,7 +90,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { title } = createTaskSchema.parse(body);
+    const data = createTaskSchema.parse(body);
 
     // Get max orderIndex for this deliverable
     const maxOrder = await prisma.deliverableTask.aggregate({
@@ -83,8 +101,24 @@ export async function POST(
     const task = await prisma.deliverableTask.create({
       data: {
         deliverableId: deliverable.id,
-        title,
+        title: data.title,
+        description: data.description || null,
+        status: data.status || DeliverableTaskStatus.NOT_STARTED,
+        assigneeId: data.assigneeId || null,
+        priority: data.priority || null,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        estimateHours: data.estimateHours || null,
         orderIndex: (maxOrder._max.orderIndex ?? -1) + 1,
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
       },
     });
 
@@ -94,6 +128,7 @@ export async function POST(
         createdAt: task.createdAt.toISOString(),
         updatedAt: task.updatedAt.toISOString(),
         completedAt: task.completedAt?.toISOString() || null,
+        dueDate: task.dueDate?.toISOString() || null,
       },
     });
   } catch (error) {

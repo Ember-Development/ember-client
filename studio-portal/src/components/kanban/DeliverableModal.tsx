@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { SprintSelector } from "@/components/sprints/SprintSelector";
+import { EpicSelector } from "@/components/epics/EpicSelector";
 import { CommentSection } from "./CommentSection";
 
 interface Deliverable {
@@ -14,6 +15,7 @@ interface Deliverable {
   assigneeId: string | null;
   estimateDays: number | null;
   sprintId: string | null;
+  epicId: string | null;
 }
 
 interface Attachment {
@@ -29,9 +31,21 @@ interface Attachment {
 interface DeliverableTask {
   id: string;
   title: string;
+  description: string | null;
+  status: "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "DONE";
   completed: boolean;
   completedAt: string | null;
   orderIndex: number;
+  assigneeId: string | null;
+  assignee: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  priority: "LOW" | "MED" | "HIGH" | "URGENT" | null;
+  dueDate: string | null;
+  estimateHours: number | null;
 }
 
 interface ProjectMember {
@@ -48,6 +62,12 @@ interface Sprint {
   endDate: string;
 }
 
+interface Epic {
+  id: string;
+  title: string;
+  status: string;
+}
+
 interface DeliverableModalProps {
   deliverable: Deliverable | null;
   isOpen: boolean;
@@ -56,6 +76,7 @@ interface DeliverableModalProps {
   onDelete?: () => void;
   projectMembers: ProjectMember[];
   sprints: Sprint[];
+  epics?: Epic[];
   projectId: string;
   highlightCommentId?: string | null;
   isReadOnly?: boolean; // For client users - view only except comments
@@ -91,6 +112,7 @@ export function DeliverableModal({
   onDelete,
   projectMembers,
   sprints,
+  epics = [],
   projectId,
   highlightCommentId,
   isReadOnly = false,
@@ -103,11 +125,14 @@ export function DeliverableModal({
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [estimateDays, setEstimateDays] = useState<string>("");
   const [sprintId, setSprintId] = useState<string | null>(null);
+  const [epicId, setEpicId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<DeliverableTask[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     if (deliverable) {
@@ -119,6 +144,7 @@ export function DeliverableModal({
       setAssigneeId(deliverable.assigneeId);
       setEstimateDays(deliverable.estimateDays?.toString() || "");
       setSprintId(deliverable.sprintId);
+      setEpicId(deliverable.epicId);
       fetchAttachments();
       fetchTasks();
     } else {
@@ -135,6 +161,7 @@ export function DeliverableModal({
     setAssigneeId(null);
     setEstimateDays("");
     setSprintId(null);
+    setEpicId(null);
     setAttachments([]);
     setTasks([]);
     setNewTaskTitle("");
@@ -180,6 +207,7 @@ export function DeliverableModal({
         const data = await response.json();
         setTasks([...tasks, data.task]);
         setNewTaskTitle("");
+        setExpandedTasks(new Set([...expandedTasks, data.task.id]));
       } else {
         const error = await response.json();
         alert(error.error || "Failed to create task");
@@ -190,26 +218,42 @@ export function DeliverableModal({
     }
   };
 
-  const handleToggleTask = async (taskId: string, completed: boolean) => {
+  const handleUpdateTask = async (taskId: string, updates: Partial<DeliverableTask>) => {
     if (!deliverable) return;
     
     try {
       const response = await fetch(`/api/projects/${projectId}/deliverables/${deliverable.id}/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !completed }),
+        body: JSON.stringify(updates),
       });
       
       if (response.ok) {
         const data = await response.json();
         setTasks(tasks.map(t => t.id === taskId ? data.task : t));
+        setEditingTaskId(null);
       } else {
         const error = await response.json();
         alert(error.error || "Failed to update task");
       }
     } catch (error) {
-      console.error("Failed to toggle task:", error);
+      console.error("Failed to update task:", error);
       alert("Failed to update task");
+    }
+  };
+
+  const handleToggleTask = async (taskId: string, status: string) => {
+    const newStatus = status === "DONE" ? "NOT_STARTED" : "DONE";
+    await handleUpdateTask(taskId, { status: newStatus as any });
+  };
+
+  const getTaskStatusColor = (status: string) => {
+    switch (status) {
+      case "NOT_STARTED": return "bg-slate-100 text-slate-700";
+      case "IN_PROGRESS": return "bg-blue-100 text-blue-700";
+      case "BLOCKED": return "bg-red-100 text-red-700";
+      case "DONE": return "bg-emerald-100 text-emerald-700";
+      default: return "bg-slate-100 text-slate-700";
     }
   };
 
@@ -454,6 +498,18 @@ export function DeliverableModal({
                     />
                   </div>
 
+                  {/* Epic */}
+                  {epics.length > 0 && (
+                    <div className="relative">
+                      <EpicSelector
+                        selectedEpicId={epicId}
+                        epics={epics}
+                        onChange={setEpicId}
+                        className="px-3 py-1.5 text-sm font-medium text-slate-900 rounded border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                      />
+                    </div>
+                  )}
+
                   {/* Due Date */}
                   <div className="relative">
                     <input
@@ -500,11 +556,27 @@ export function DeliverableModal({
               )}
             </div>
 
-            {/* Tasks */}
+            {/* Tasks / Sub-items */}
             <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">
-                Tasks
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-slate-900">
+                  Sub-items ({tasks.filter(t => t.status === "DONE").length}/{tasks.length} complete)
+                </label>
+                {tasks.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (expandedTasks.size === tasks.length) {
+                        setExpandedTasks(new Set());
+                      } else {
+                        setExpandedTasks(new Set(tasks.map(t => t.id)));
+                      }
+                    }}
+                    className="text-xs text-slate-600 hover:text-slate-900"
+                  >
+                    {expandedTasks.size === tasks.length ? "Collapse All" : "Expand All"}
+                  </button>
+                )}
+              </div>
               {!isReadOnly && deliverable && (
                 <div className="flex gap-2 mb-3">
                   <input
@@ -512,7 +584,7 @@ export function DeliverableModal({
                     value={newTaskTitle}
                     onChange={(e) => setNewTaskTitle(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleCreateTask()}
-                    placeholder="Add a task..."
+                    placeholder="Add a sub-item..."
                     className="flex-1 px-3 py-2 text-sm text-slate-900 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-slate-400"
                   />
                   <button
@@ -526,44 +598,216 @@ export function DeliverableModal({
               )}
               {tasks.length === 0 ? (
                 <p className="text-sm font-medium text-slate-600 italic">
-                  No tasks yet. {!isReadOnly && deliverable && "Add a task above to get started."}
+                  No sub-items yet. {!isReadOnly && deliverable && "Add a sub-item above to get started."}
                 </p>
               ) : (
-                <div className="space-y-2">
-                  {tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => !isReadOnly && handleToggleTask(task.id, task.completed)}
-                        disabled={isReadOnly}
-                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
-                      />
-                      <span
-                        className={`flex-1 text-sm ${
-                          task.completed
-                            ? "line-through text-slate-500"
-                            : "text-slate-900"
-                        }`}
+                <div className="space-y-3">
+                  {tasks.map((task) => {
+                    const isExpanded = expandedTasks.has(task.id);
+                    const isEditing = editingTaskId === task.id;
+                    return (
+                      <div
+                        key={task.id}
+                        className="rounded-lg border border-slate-200 bg-white overflow-hidden"
                       >
-                        {task.title}
-                      </span>
-                      {!isReadOnly && (
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                          title="Delete task"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                        <div className="p-3 flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={task.status === "DONE"}
+                            onChange={() => !isReadOnly && handleToggleTask(task.id, task.status)}
+                            disabled={isReadOnly}
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            {isEditing && !isReadOnly ? (
+                              <input
+                                type="text"
+                                defaultValue={task.title}
+                                onBlur={(e) => {
+                                  if (e.target.value.trim() && e.target.value !== task.title) {
+                                    handleUpdateTask(task.id, { title: e.target.value.trim() });
+                                  } else {
+                                    setEditingTaskId(null);
+                                  }
+                                }}
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.currentTarget.blur();
+                                  }
+                                }}
+                                autoFocus
+                                className="w-full text-sm font-medium text-slate-900 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 bg-slate-50"
+                              />
+                            ) : (
+                              <div
+                                className={`text-sm font-medium ${
+                                  task.status === "DONE"
+                                    ? "line-through text-slate-500"
+                                    : "text-slate-900"
+                                } ${!isReadOnly ? "cursor-pointer hover:text-blue-600" : ""}`}
+                                onClick={() => !isReadOnly && setEditingTaskId(task.id)}
+                              >
+                                {task.title}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <select
+                                value={task.status}
+                                onChange={(e) => !isReadOnly && handleUpdateTask(task.id, { status: e.target.value as any })}
+                                disabled={isReadOnly}
+                                className={`text-xs font-semibold px-2 py-0.5 rounded border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed ${getTaskStatusColor(task.status)}`}
+                              >
+                                <option value="NOT_STARTED">Not Started</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="BLOCKED">Blocked</option>
+                                <option value="DONE">Done</option>
+                              </select>
+                              {task.priority && (
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded ${getPriorityColor(task.priority)}`}>
+                                  {task.priority}
+                                </span>
+                              )}
+                              {task.assignee && (
+                                <span className="text-xs text-slate-600">
+                                  {task.assignee.firstName && task.assignee.lastName
+                                    ? `${task.assignee.firstName} ${task.assignee.lastName}`
+                                    : task.assignee.email}
+                                </span>
+                              )}
+                              {task.dueDate && (
+                                <span className={`text-xs ${
+                                  new Date(task.dueDate) < new Date() ? "text-red-600 font-semibold" : "text-slate-600"
+                                }`}>
+                                  Due: {new Date(task.dueDate).toLocaleDateString()}
+                                </span>
+                              )}
+                              {task.estimateHours && (
+                                <span className="text-xs text-slate-600">
+                                  {task.estimateHours}h
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                const newExpanded = new Set(expandedTasks);
+                                if (newExpanded.has(task.id)) {
+                                  newExpanded.delete(task.id);
+                                } else {
+                                  newExpanded.add(task.id);
+                                }
+                                setExpandedTasks(newExpanded);
+                              }}
+                              className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+                              title={isExpanded ? "Collapse" : "Expand"}
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                {isExpanded ? (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                ) : (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                )}
+                              </svg>
+                            </button>
+                            {!isReadOnly && (
+                              <button
+                                onClick={() => handleDeleteTask(task.id)}
+                                className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                                title="Delete sub-item"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {isExpanded && (
+                          <div className="px-3 pb-3 pt-0 border-t border-slate-100 space-y-3">
+                            {task.description || isEditing ? (
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
+                                {isEditing && !isReadOnly ? (
+                                  <textarea
+                                    defaultValue={task.description || ""}
+                                    onBlur={(e) => {
+                                      if (e.target.value !== (task.description || "")) {
+                                        handleUpdateTask(task.id, { description: e.target.value.trim() || null });
+                                      }
+                                    }}
+                                    rows={3}
+                                    className="w-full text-sm text-slate-900 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none placeholder:text-slate-400"
+                                    placeholder="Add description..."
+                                  />
+                                ) : (
+                                  <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                                    {task.description || <span className="italic text-slate-400">No description</span>}
+                                  </p>
+                                )}
+                              </div>
+                            ) : null}
+                            {!isReadOnly && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs font-semibold text-slate-700 mb-1">Assignee</label>
+                                  <select
+                                    value={task.assigneeId || ""}
+                                    onChange={(e) => handleUpdateTask(task.id, { assigneeId: e.target.value || null })}
+                                    className="w-full text-sm px-2 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  >
+                                    <option value="">Unassigned</option>
+                                    {projectMembers.map((member) => (
+                                      <option key={member.id} value={member.id}>
+                                        {member.firstName && member.lastName
+                                          ? `${member.firstName} ${member.lastName}`
+                                          : member.email}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-slate-700 mb-1">Priority</label>
+                                  <select
+                                    value={task.priority || ""}
+                                    onChange={(e) => handleUpdateTask(task.id, { priority: e.target.value as any || null })}
+                                    className="w-full text-sm px-2 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  >
+                                    <option value="">None</option>
+                                    <option value="LOW">Low</option>
+                                    <option value="MED">Medium</option>
+                                    <option value="HIGH">High</option>
+                                    <option value="URGENT">Urgent</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-slate-700 mb-1">Due Date</label>
+                                  <input
+                                    type="date"
+                                    value={task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : ""}
+                                    onChange={(e) => handleUpdateTask(task.id, { dueDate: e.target.value || null })}
+                                    className="w-full text-sm px-2 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-slate-700 mb-1">Estimate (hours)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={task.estimateHours || ""}
+                                    onChange={(e) => handleUpdateTask(task.id, { estimateHours: e.target.value ? parseFloat(e.target.value) : null })}
+                                    className="w-full text-sm px-2 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="0"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
