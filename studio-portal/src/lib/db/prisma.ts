@@ -9,12 +9,14 @@ const globalForPrisma = globalThis as unknown as {
 
 const connectionString = process.env.DATABASE_URL || "";
 
+// For Vercel/serverless, we need to ensure singleton pattern works
+// The global object persists across function invocations in the same container
 export const pool =
   globalForPrisma.pool ??
   new Pool({
     connectionString,
-    max: 1, // Reduced to 1 for serverless - each function gets its own connection
-    idleTimeoutMillis: 20000, // Close idle connections after 20 seconds
+    max: 1, // Keep at 1 for serverless - each function instance gets 1 connection
+    idleTimeoutMillis: 10000, // Reduced from 20s - close idle connections faster
     connectionTimeoutMillis: 5000, // Timeout after 5 seconds if can't connect
     ssl: connectionString.includes("supabase.com") || connectionString.includes("sslmode=require")
       ? {
@@ -23,7 +25,8 @@ export const pool =
       : false,
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;
+// CRITICAL: Always set global, even in production (for Vercel serverless)
+globalForPrisma.pool = pool;
 
 const adapter = new PrismaPg(pool);
 
@@ -31,7 +34,8 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    log: ["error", "warn"],
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// CRITICAL: Always set global, even in production (for Vercel serverless)
+globalForPrisma.prisma = prisma;
