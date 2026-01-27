@@ -34,6 +34,10 @@ export function TemplateSelector({ isOpen, onClose, onSelect }: TemplateSelector
         return "bg-amber-100 text-amber-700";
       case "LAUNCH_CHECKLIST":
         return "bg-indigo-100 text-indigo-700";
+      case "NOTE":
+        return "bg-yellow-100 text-yellow-700";
+      case "DATABASE_ERD":
+        return "bg-cyan-100 text-cyan-700";
       default:
         return "bg-slate-100 text-slate-700";
     }
@@ -70,6 +74,8 @@ export function TemplateSelector({ isOpen, onClose, onSelect }: TemplateSelector
             <option value="DESIGN">Design</option>
             <option value="API">API Documentation</option>
             <option value="LAUNCH_CHECKLIST">Launch Checklist</option>
+            <option value="NOTE">Notes</option>
+            <option value="DATABASE_ERD">Database ERD</option>
           </select>
         </div>
 

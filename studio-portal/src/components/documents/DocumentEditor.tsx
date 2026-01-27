@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { ArchitectureEditor } from "./ArchitectureEditor";
 import { ApiEditor } from "./ApiEditor";
 import { RichTextEditor } from "./RichTextEditor";
+import { NoteEditor } from "./NoteEditor";
+import { DatabaseERDEditor } from "./DatabaseERDEditor";
 
 interface DocumentEditorProps {
   document: {
@@ -64,7 +66,19 @@ export function DocumentEditor({ document, projectId, onSave, onDelete, onExport
       {/* Toolbar */}
       <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
         <div className="flex items-center gap-2">
-          {document.type !== "ARCHITECTURE" && document.type !== "API" && (
+          {document.type === "ARCHITECTURE" && (
+            <span className="text-sm text-slate-600">Architecture Diagram</span>
+          )}
+          {document.type === "API" && (
+            <span className="text-sm text-slate-600">API Documentation</span>
+          )}
+          {document.type === "NOTE" && (
+            <span className="text-sm text-slate-600">Project Notes</span>
+          )}
+          {document.type === "DATABASE_ERD" && (
+            <span className="text-sm text-slate-600">Database ERD</span>
+          )}
+          {!["ARCHITECTURE", "API", "NOTE", "DATABASE_ERD"].includes(document.type) && (
             <span className="text-sm text-slate-600">Rich Text Editor</span>
           )}
         </div>
@@ -164,6 +178,10 @@ export function DocumentEditor({ document, projectId, onSave, onDelete, onExport
           <ArchitectureEditor content={content} onChange={setContent} />
         ) : document.type === "API" ? (
           <ApiEditor content={content} onChange={setContent} />
+        ) : document.type === "NOTE" ? (
+          <NoteEditor content={content} onChange={setContent} />
+        ) : document.type === "DATABASE_ERD" ? (
+          <DatabaseERDEditor content={content} onChange={setContent} />
         ) : (
           <RichTextEditor content={content} onChange={setContent} />
         )}

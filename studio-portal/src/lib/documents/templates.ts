@@ -304,6 +304,74 @@ POST /api/endpoint2
 **Target:** {{targetLaunchDate}}  
 **Actual:** [To be filled]`,
   },
+  {
+    id: "note-template",
+    type: "NOTE",
+    name: "Project Note",
+    description: "Quick notes and important information for the project",
+    content: `# {{projectName}} - Project Notes
+
+## Important Information
+[Add important notes, decisions, or reminders here]
+
+## Meeting Notes
+[Document key points from meetings]
+
+## Decisions
+[Record important decisions made]
+
+## Reminders
+[Things to remember]
+
+## Links & Resources
+[Important links and resources]
+
+---
+*Last updated: [Date]*
+`,
+  },
+  {
+    id: "database-erd-template",
+    type: "DATABASE_ERD",
+    name: "Database ERD",
+    description: "Entity Relationship Diagram for database schema design",
+    content: JSON.stringify({
+      nodes: [
+        {
+          id: "1",
+          type: "entity",
+          position: { x: 100, y: 100 },
+          data: {
+            tableName: "users",
+            attributes: ["id", "email", "name", "created_at", "updated_at"],
+          },
+        },
+        {
+          id: "2",
+          type: "entity",
+          position: { x: 400, y: 100 },
+          data: {
+            tableName: "posts",
+            attributes: ["id", "user_id", "title", "content", "created_at", "updated_at"],
+          },
+        },
+      ],
+      edges: [
+        {
+          id: "e1-2",
+          source: "1",
+          target: "2",
+          label: "1:N",
+          labelStyle: { fill: "#374151", fontWeight: 600 },
+          style: { stroke: "#64748b", strokeWidth: 2 },
+          markerEnd: {
+            type: "arrowclosed",
+            color: "#64748b",
+          },
+        },
+      ],
+    }, null, 2),
+  },
 ];
 
 export function getTemplateById(id: string): DocumentTemplate | undefined {
