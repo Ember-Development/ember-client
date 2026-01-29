@@ -331,7 +331,7 @@ model Document {
 
   uploaderId   String?
   type         DocumentType @default(OTHER)
-  title        String
+  title        String?
   description  String?
   versionLabel String?
 

@@ -6,13 +6,22 @@ import { z } from "zod";
 import { createDocumentUpdateUpdate } from "@/lib/projects/updates";
 
 const createSchema = z.object({
-  title: z.string().min(1),
-  type: z.enum(["SCOPE", "SOW", "ARCHITECTURE", "DESIGN", "API", "LAUNCH_CHECKLIST", "HANDOFF", "OTHER"]),
+  title: z.string().optional().nullable(),
+  type: z.enum(["SCOPE", "SOW", "ARCHITECTURE", "DESIGN", "API", "LAUNCH_CHECKLIST", "HANDOFF", "NOTE", "DATABASE_ERD", "OTHER"]),
   description: z.string().optional().nullable(),
   content: z.string().optional().nullable(),
   templateId: z.string().optional().nullable(),
   versionLabel: z.string().optional().nullable(),
   clientVisible: z.boolean().optional(),
+}).refine((data) => {
+  // Title is required for all types except NOTE
+  if (data.type !== "NOTE" && (!data.title || data.title.trim().length === 0)) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Title is required for this document type",
+  path: ["title"],
 });
 
 export async function GET(
@@ -53,11 +62,14 @@ export async function POST(
     const body = await request.json();
     const data = createSchema.parse(body);
 
+    // Provide default title for NOTE type if none provided
+    const documentTitle = data.title?.trim() || (data.type === "NOTE" ? "Untitled Note" : null);
+    
     const document = await prisma.document.create({
       data: {
         projectId: project.id,
         uploaderId: user.id,
-        title: data.title,
+        title: documentTitle,
         type: data.type,
         description: data.description || null,
         content: data.content || null,
@@ -69,7 +81,7 @@ export async function POST(
 
     // Create project update for new document
     try {
-      await createDocumentUpdateUpdate(project.id, document.title, true, user.id);
+      await createDocumentUpdateUpdate(project.id, document.title || "Untitled Note", true, user.id);
     } catch (error) {
       console.error("Error creating document update:", error);
       // Don't fail the request if update creation fails

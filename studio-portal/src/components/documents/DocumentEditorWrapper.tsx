@@ -6,7 +6,7 @@ import { DocumentEditor } from "./DocumentEditor";
 interface DocumentEditorWrapperProps {
   document: {
     id: string;
-    title: string;
+    title: string | null;
     type: string;
     content: string | null;
     description: string | null;
@@ -25,7 +25,7 @@ export function DocumentEditorWrapper({
   const router = useRouter();
 
   const handleSave = async (data: {
-    title: string;
+    title: string | null;
     content: string;
     description: string | null;
     versionLabel: string | null;
@@ -72,7 +72,7 @@ export function DocumentEditorWrapper({
       const url = window.URL.createObjectURL(blob);
       const a = window.document.createElement("a");
       a.href = url;
-      a.download = `${document.title}.${format}`;
+      a.download = `${document.title || "Untitled Note"}.${format}`;
       window.document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

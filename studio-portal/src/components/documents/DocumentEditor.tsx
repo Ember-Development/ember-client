@@ -10,7 +10,7 @@ import { DatabaseERDEditor } from "./DatabaseERDEditor";
 interface DocumentEditorProps {
   document: {
     id: string;
-    title: string;
+    title: string | null;
     type: string;
     content: string | null;
     description: string | null;
@@ -18,13 +18,13 @@ interface DocumentEditorProps {
     clientVisible: boolean;
   };
   projectId: string;
-  onSave: (data: { title: string; content: string; description: string | null; versionLabel: string | null; clientVisible: boolean }) => Promise<void>;
+  onSave: (data: { title: string | null; content: string; description: string | null; versionLabel: string | null; clientVisible: boolean }) => Promise<void>;
   onDelete?: () => Promise<void>;
   onExport?: (format: "pdf" | "docx") => Promise<void>;
 }
 
 export function DocumentEditor({ document, projectId, onSave, onDelete, onExport }: DocumentEditorProps) {
-  const [title, setTitle] = useState(document.title);
+  const [title, setTitle] = useState(document.title || "");
   const [content, setContent] = useState(document.content || "");
   const [description, setDescription] = useState(document.description || "");
   const [versionLabel, setVersionLabel] = useState(document.versionLabel || "");
@@ -35,8 +35,13 @@ export function DocumentEditor({ document, projectId, onSave, onDelete, onExport
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // For NOTE type, allow empty/null title; for others, require title
+      const titleToSave = document.type === "NOTE" 
+        ? (title.trim() || null)
+        : (title.trim() || document.title || "Untitled");
+      
       await onSave({
-        title,
+        title: titleToSave,
         content,
         description: description || null,
         versionLabel: versionLabel || null,
@@ -149,9 +154,9 @@ export function DocumentEditor({ document, projectId, onSave, onDelete, onExport
       <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
         <input
           type="text"
-          value={title}
+          value={title || ""}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Document title"
+          placeholder={document.type === "NOTE" ? "Note title (optional)" : "Document title"}
           className="w-full text-lg font-semibold bg-transparent border-none focus:outline-none text-slate-900"
         />
         <div className="flex items-center gap-4 mt-2">

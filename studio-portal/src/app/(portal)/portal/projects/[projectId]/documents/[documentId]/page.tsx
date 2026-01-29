@@ -59,7 +59,7 @@ export default async function ClientDocumentPage({
               {documentTypeIcons[document.type] || "📎"}
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-slate-900">{document.title}</h1>
+              <h1 className="text-2xl font-bold text-slate-900">{document.title || "Untitled Note"}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs font-medium text-slate-600 px-2 py-1 bg-slate-100 rounded">
                   {document.type}

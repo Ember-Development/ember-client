@@ -518,7 +518,7 @@ export default async function PortalProjectPage({ params }: { params: Promise<{ 
                       {documentTypeIcons[doc.type] || "📎"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">{doc.title}</h3>
+                      <h3 className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">{doc.title || "Untitled Note"}</h3>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-medium text-slate-600">{doc.type}</span>
                         {doc.versionLabel && (

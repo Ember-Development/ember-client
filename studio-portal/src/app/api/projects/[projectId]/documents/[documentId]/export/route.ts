@@ -51,15 +51,16 @@ export async function GET(
 
     // Export document content to PDF
     if (format === "pdf") {
+      const documentTitle = document.title || "Untitled Note";
       const pdfBuffer = await exportDocumentToPDF(
-        document.title,
+        documentTitle,
         document.content || ""
       );
 
       return new NextResponse(pdfBuffer as any, {
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${document.title.replace(/[^a-z0-9]/gi, '_')}.pdf"`,
+          "Content-Disposition": `attachment; filename="${documentTitle.replace(/[^a-z0-9]/gi, '_')}.pdf"`,
         },
       });
     } else if (format === "docx") {
