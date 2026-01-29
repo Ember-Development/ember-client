@@ -5,7 +5,7 @@ import { DocumentType } from ".prisma/client";
 
 interface Document {
   id: string;
-  title: string;
+  title: string | null;
   type: DocumentType;
   description: string | null;
   versionLabel: string | null;
@@ -47,6 +47,10 @@ export function DocumentList({ documents, projectId }: DocumentListProps) {
         return "bg-indigo-100 text-indigo-700 border-indigo-200";
       case "HANDOFF":
         return "bg-slate-100 text-slate-700 border-slate-200";
+      case "NOTE":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "DATABASE_ERD":
+        return "bg-cyan-100 text-cyan-700 border-cyan-200";
       default:
         return "bg-slate-100 text-slate-700 border-slate-200";
     }
@@ -71,6 +75,8 @@ export function DocumentList({ documents, projectId }: DocumentListProps) {
             <option value="API">API</option>
             <option value="LAUNCH_CHECKLIST">Launch Checklist</option>
             <option value="HANDOFF">Handoff</option>
+            <option value="NOTE">Note</option>
+            <option value="DATABASE_ERD">Database ERD</option>
             <option value="OTHER">Other</option>
           </select>
         </div>
@@ -102,7 +108,7 @@ export function DocumentList({ documents, projectId }: DocumentListProps) {
           >
             <div className="flex items-start justify-between gap-3 mb-2">
               <h3 className="text-sm font-semibold text-slate-900 group-hover:text-slate-700 flex-1">
-                {doc.title}
+                {doc.title || "Untitled Note"}
               </h3>
               <span
                 className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border shrink-0 ${getTypeColor(doc.type)}`}
